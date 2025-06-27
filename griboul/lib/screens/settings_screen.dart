@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../constants/colors.dart';
-import '../constants/fonts.dart';
-import '../constants/sizes.dart';
+import '../utils/griboul_theme.dart';
 import '../providers/auth_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -21,70 +20,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showSignOutDialog() {
     showDialog(
       context: context,
+      barrierColor: GriboulTheme.ink.withOpacity(0.8),
       builder:
           (context) => Dialog(
-            backgroundColor: AppColors.surfaceBlack,
+            backgroundColor: GriboulTheme.charcoal,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
+              borderRadius: BorderRadius.circular(
+                0,
+              ), // Sharp corners, NYT style
             ),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(GriboulTheme.space4),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text('Sign Out', style: GriboulTheme.headline3),
+                  const SizedBox(height: GriboulTheme.space2),
                   Text(
-                    'Sign Out?',
-                    style: TextStyle(
+                    'You\'ll need to sign in again to access your builder account.',
+                    style: GriboulTheme.body1.copyWith(
                       fontFamily: 'Georgia',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: GriboulTheme.ash,
+                      height: 1.5,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'You\'ll need to sign in again to access your account.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 16,
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: GriboulTheme.space4),
                   Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.pop(context);
+                          },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: GriboulTheme.space2,
+                            ),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: AppColors.textPrimary.withOpacity(0.3),
+                                color: GriboulTheme.smoke,
                                 width: 1,
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 'CANCEL',
-                                style: TextStyle(
-                                  fontFamily: 'Helvetica',
-                                  fontSize: 12,
-                                  letterSpacing: 1.2,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                style: GriboulTheme.button.copyWith(
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: GriboulTheme.space2),
                       Expanded(
                         child: GestureDetector(
                           onTap: () async {
+                            HapticFeedback.mediumImpact();
                             Navigator.pop(context);
                             final authProvider = Provider.of<AuthProvider>(
                               context,
@@ -99,17 +94,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            color: AppColors.accentRed,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: GriboulTheme.space2,
+                            ),
+                            color: GriboulTheme.paper,
                             child: Center(
                               child: Text(
                                 'SIGN OUT',
-                                style: TextStyle(
-                                  fontFamily: 'Helvetica',
-                                  fontSize: 12,
-                                  letterSpacing: 1.2,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
+                                style: GriboulTheme.button.copyWith(
+                                  color: GriboulTheme.ink,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
                             ),
@@ -128,41 +122,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBlack,
+      backgroundColor: GriboulTheme.ink,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(GriboulTheme.space3),
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pop(context);
+                    },
+                    child: Icon(
                       Icons.arrow_back,
-                      color: AppColors.textPrimary,
+                      color: GriboulTheme.paper,
                       size: 24,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Settings',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                  const SizedBox(width: GriboulTheme.space2),
+                  Text('Preferences', style: GriboulTheme.headline2),
                 ],
               ),
             ),
 
-            Container(
-              height: 0.5,
-              color: AppColors.textPrimary.withOpacity(0.2),
-            ),
+            GriboulTheme.divider(),
 
             // Settings list
             Expanded(
@@ -171,78 +158,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Notifications section
                   _buildSectionHeader('NOTIFICATIONS'),
                   _buildToggleItem(
-                    'Daily Reminders',
-                    'Get notified to record your daily video',
+                    'Daily Recording Reminder',
+                    'Get notified to share your daily update',
                     _dailyReminders,
                     (value) => setState(() => _dailyReminders = value),
                   ),
                   _buildToggleItem(
                     'Messages',
-                    'New messages from other builders',
+                    'New messages from fellow builders',
                     _messageNotifications,
                     (value) => setState(() => _messageNotifications = value),
                   ),
                   _buildToggleItem(
-                    'Email Updates',
-                    'Weekly digest and product updates',
+                    'Weekly Digest',
+                    'Curated updates from the community',
                     _emailUpdates,
                     (value) => setState(() => _emailUpdates = value),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: GriboulTheme.space4),
 
-                  // Account section
-                  _buildSectionHeader('ACCOUNT'),
+                  // Privacy section
+                  _buildSectionHeader('PRIVACY'),
                   _buildListItem(
-                    'Privacy',
-                    'Control who can see your videos',
+                    'Video Visibility',
+                    'Control who can see your updates',
                     () {},
                   ),
                   _buildListItem(
-                    'Blocked Users',
-                    'Manage blocked accounts',
+                    'Blocked Accounts',
+                    'Manage blocked builders',
                     () {},
-                  ),
-                  _buildListItem(
-                    'Delete Account',
-                    'Permanently delete your account',
-                    () {},
-                    isDestructive: true,
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: GriboulTheme.space4),
 
                   // About section
-                  _buildSectionHeader('ABOUT'),
+                  _buildSectionHeader('ABOUT GRIBOUL'),
                   _buildListItem('Terms of Service', null, () {}),
                   _buildListItem('Privacy Policy', null, () {}),
                   _buildListItem('Version', '1.0.0', null, showArrow: false),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: GriboulTheme.space4),
+
+                  // Account section
+                  _buildSectionHeader('ACCOUNT'),
+                  _buildListItem(
+                    'Delete Account',
+                    'Permanently remove your data',
+                    () {},
+                    isDestructive: true,
+                  ),
+
+                  const SizedBox(height: GriboulTheme.space4),
 
                   // Sign out button
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: GriboulTheme.space3,
+                    ),
                     child: GestureDetector(
-                      onTap: _showSignOutDialog,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _showSignOutDialog();
+                      },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: GriboulTheme.space2,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.accentRed.withOpacity(0.1),
                           border: Border.all(
-                            color: AppColors.accentRed,
+                            color: GriboulTheme.smoke,
                             width: 1,
                           ),
                         ),
                         child: Center(
                           child: Text(
                             'SIGN OUT',
-                            style: TextStyle(
-                              fontFamily: 'Helvetica',
-                              fontSize: 14,
-                              letterSpacing: 1.2,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.accentRed,
+                            style: GriboulTheme.button.copyWith(
+                              letterSpacing: 1.5,
                             ),
                           ),
                         ),
@@ -250,7 +244,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: GriboulTheme.space10),
                 ],
               ),
             ),
@@ -262,15 +256,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      padding: const EdgeInsets.fromLTRB(
+        GriboulTheme.space3,
+        GriboulTheme.space3,
+        GriboulTheme.space3,
+        GriboulTheme.space2,
+      ),
       child: Text(
         title,
-        style: TextStyle(
-          fontFamily: 'Helvetica',
-          fontSize: 11,
-          letterSpacing: 1.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
+        style: GriboulTheme.overline.copyWith(
+          color: GriboulTheme.ash,
+          letterSpacing: 2.0,
         ),
       ),
     );
@@ -283,13 +279,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Function(bool) onChanged,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: GriboulTheme.space3,
+        vertical: GriboulTheme.space2,
+      ),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.textPrimary.withOpacity(0.1),
-            width: 0.5,
-          ),
+          bottom: BorderSide(color: GriboulTheme.smoke, width: 0.5),
         ),
       ),
       child: Row(
@@ -300,31 +296,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: 'Helvetica',
-                    fontSize: 16,
+                  style: GriboulTheme.body1.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
                   ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: GriboulTheme.caption.copyWith(
                       fontFamily: 'Georgia',
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
+                      color: GriboulTheme.ash,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          CupertinoSwitch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.accentGreen,
+          Transform.scale(
+            scale: 0.8,
+            child: CupertinoSwitch(
+              value: value,
+              onChanged: (newValue) {
+                HapticFeedback.lightImpact();
+                onChanged(newValue);
+              },
+              activeColor: GriboulTheme.paper,
+              trackColor: GriboulTheme.charcoal,
+              thumbColor: value ? GriboulTheme.ink : GriboulTheme.ash,
+            ),
           ),
         ],
       ),
@@ -339,15 +339,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool isDestructive = false,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap:
+          onTap != null
+              ? () {
+                HapticFeedback.lightImpact();
+                onTap();
+              }
+              : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: GriboulTheme.space3,
+          vertical: GriboulTheme.space2,
+        ),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: AppColors.textPrimary.withOpacity(0.1),
-              width: 0.5,
-            ),
+            bottom: BorderSide(color: GriboulTheme.smoke, width: 0.5),
           ),
         ),
         child: Row(
@@ -358,24 +364,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontFamily: 'Helvetica',
-                      fontSize: 16,
+                    style: GriboulTheme.body1.copyWith(
                       fontWeight: FontWeight.w500,
                       color:
                           isDestructive
-                              ? AppColors.accentRed
-                              : AppColors.textPrimary,
+                              ? GriboulTheme.recordRed
+                              : GriboulTheme.paper,
                     ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
+                      style: GriboulTheme.caption.copyWith(
+                        fontFamily: subtitle == '1.0.0' ? 'Courier' : 'Georgia',
+                        color: GriboulTheme.ash,
                       ),
                     ),
                   ],
@@ -383,11 +386,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             if (showArrow)
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.textTertiary,
-                size: 20,
-              ),
+              Icon(Icons.chevron_right, color: GriboulTheme.ash, size: 20),
           ],
         ),
       ),

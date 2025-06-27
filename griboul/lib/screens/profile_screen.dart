@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../constants/colors.dart';
-import '../constants/fonts.dart';
-import '../constants/sizes.dart';
+import '../utils/griboul_theme.dart';
+import '../widgets/circular_video_widget.dart';
 import '../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -15,318 +15,392 @@ class ProfileScreen extends StatelessWidget {
     final profile = authProvider.userProfile ?? {};
 
     return Scaffold(
-      backgroundColor: AppColors.primaryBlack,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
+      backgroundColor: GriboulTheme.ink,
+      body: CustomScrollView(
+        slivers: [
+          // Header
+          SliverToBoxAdapter(
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  // Top bar
+                  Container(
+                    padding: const EdgeInsets.all(GriboulTheme.space3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Builder Profile', style: GriboulTheme.headline2),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.pushNamed(context, '/settings');
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: GriboulTheme.smoke,
+                                width: 1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.settings_outlined,
+                              color: GriboulTheme.paper,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  GriboulTheme.divider(),
+
+                  // Profile header
+                  Padding(
+                    padding: const EdgeInsets.all(GriboulTheme.space3),
+                    child: Column(
+                      children: [
+                        // Avatar
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: GriboulTheme.charcoal,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: GriboulTheme.smoke,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              (profile['name'] ?? user?.displayName ?? 'U')
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: GriboulTheme.display.copyWith(
+                                fontSize: 48,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: GriboulTheme.space3),
+
+                        // Name
+                        Text(
+                          profile['name'] ??
+                              user?.displayName ??
+                              'Unknown Builder',
+                          style: GriboulTheme.headline1.copyWith(fontSize: 32),
+                        ),
+
+                        const SizedBox(height: GriboulTheme.space1),
+
+                        // Location and age
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              (profile['location'] ?? 'Earth').toUpperCase(),
+                              style: GriboulTheme.overline.copyWith(
+                                color: GriboulTheme.ash,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: GriboulTheme.space2,
+                              ),
+                              width: 3,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: GriboulTheme.ash,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Text(
+                              '${profile['age'] ?? '∞'} YEARS OLD',
+                              style: GriboulTheme.overline.copyWith(
+                                color: GriboulTheme.ash,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: GriboulTheme.space3),
+
+                        // What building - Editorial style
+                        Container(
+                          padding: const EdgeInsets.all(GriboulTheme.space3),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: GriboulTheme.space3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: GriboulTheme.charcoal,
+                            borderRadius: BorderRadius.circular(
+                              GriboulTheme.radiusMedium,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'BUILDING',
+                                style: GriboulTheme.overline.copyWith(
+                                  color: GriboulTheme.ash,
+                                  letterSpacing: 2.0,
+                                ),
+                              ),
+                              const SizedBox(height: GriboulTheme.space1),
+                              Text(
+                                profile['building'] ?? 'Something amazing',
+                                style: GriboulTheme.body1.copyWith(
+                                  fontFamily: 'Georgia',
+                                  fontSize: 18,
+                                  height: 1.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Stats row
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: GriboulTheme.space3,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: GriboulTheme.smoke),
+                        bottom: BorderSide(color: GriboulTheme.smoke),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildStat('VIDEOS', '12')),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: GriboulTheme.smoke,
+                        ),
+                        Expanded(child: _buildStat('VIEWS', '1.2K')),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: GriboulTheme.smoke,
+                        ),
+                        Expanded(child: _buildStat('CONNECTIONS', '48')),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Section header
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(GriboulTheme.space3),
               child: Row(
                 children: [
                   Text(
-                    'Builder',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                    'YOUR JOURNEY',
+                    style: GriboulTheme.overline.copyWith(
+                      color: GriboulTheme.ash,
+                      letterSpacing: 2.0,
                     ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, '/settings');
+                      HapticFeedback.lightImpact();
+                      // Toggle view
                     },
                     child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.textPrimary.withOpacity(0.3),
-                          width: 1,
-                        ),
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: GriboulTheme.space2,
+                        vertical: 6,
                       ),
-                      child: Icon(
-                        Icons.settings_outlined,
-                        color: AppColors.textPrimary,
-                        size: 20,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: GriboulTheme.smoke, width: 1),
+                        borderRadius: BorderRadius.circular(
+                          GriboulTheme.radiusSmall,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lock_outline,
+                            size: 14,
+                            color: GriboulTheme.ash,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'PRIVATE (3)',
+                            style: GriboulTheme.overline.copyWith(
+                              fontSize: 10,
+                              color: GriboulTheme.ash,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            Container(
-              height: 0.5,
-              color: AppColors.textPrimary.withOpacity(0.2),
+          // Video grid
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: GriboulTheme.space3,
             ),
-
-            // Profile content
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  // Profile header
-                  _buildProfileHeader(user, profile),
-
-                  const SizedBox(height: 32),
-
-                  // Stats
-                  _buildStats(),
-
-                  const SizedBox(height: 32),
-
-                  // Videos grid
-                  Row(
-                    children: [
-                      Text(
-                        'YOUR VIDEOS',
-                        style: TextStyle(
-                          fontFamily: 'Helvetica',
-                          fontSize: 11,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {
-                          // Toggle between public and private
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: AppColors.textPrimary.withOpacity(0.3),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.lock_outline,
-                                size: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'PRIVATE (3)',
-                                style: TextStyle(
-                                  fontFamily: 'Helvetica',
-                                  fontSize: 10,
-                                  letterSpacing: 1.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildVideoGrid(),
-                ],
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+                childAspectRatio: 1,
               ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                return _buildVideoThumbnail(index);
+              }, childCount: 9),
             ),
-          ],
-        ),
+          ),
+
+          // Bottom padding
+          const SliverToBoxAdapter(
+            child: SizedBox(height: GriboulTheme.space10),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildProfileHeader(dynamic user, Map<String, dynamic> profile) {
-    return Column(
-      children: [
-        // Avatar
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceBlack,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.textPrimary.withOpacity(0.2),
-              width: 2,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              (profile['name'] ?? user?.displayName ?? 'U')
-                  .substring(0, 1)
-                  .toUpperCase(),
-              style: const TextStyle(
-                fontFamily: 'Georgia',
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Name
-        Text(
-          profile['name'] ?? user?.displayName ?? 'Unknown Builder',
-          style: const TextStyle(
-            fontFamily: 'Georgia',
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Location and building
-        Text(
-          '${profile['location'] ?? 'Earth'} • ${profile['age'] ?? '∞'} years old',
-          style: TextStyle(
-            fontFamily: 'Helvetica',
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // What building
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceBlack,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            profile['building'] ?? 'Building something amazing',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 16,
-              color: AppColors.textPrimary,
-              height: 1.4,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStats() {
-    return Row(
-      children: [
-        Expanded(child: _buildStatItem('VIDEOS', '12')),
-        Container(
-          width: 1,
-          height: 40,
-          color: AppColors.textPrimary.withOpacity(0.1),
-        ),
-        Expanded(child: _buildStatItem('VIEWS', '1.2K')),
-        Container(
-          width: 1,
-          height: 40,
-          color: AppColors.textPrimary.withOpacity(0.1),
-        ),
-        Expanded(child: _buildStatItem('CONNECTIONS', '48')),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStat(String label, String value) {
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontFamily: 'Georgia',
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+          style: GriboulTheme.headline2.copyWith(fontFamily: 'Georgia'),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontFamily: 'Helvetica',
+          style: GriboulTheme.overline.copyWith(
+            color: GriboulTheme.ash,
             fontSize: 10,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
+            letterSpacing: 1.5,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildVideoGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
-        childAspectRatio: 1,
-      ),
-      itemCount: 9,
-      itemBuilder: (context, index) {
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceBlack,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Stack(
-            children: [
-              // Placeholder for video thumbnail
-              Center(
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: AppColors.textTertiary,
-                  size: 32,
+  Widget _buildVideoThumbnail(int index) {
+    final durations = [
+      '2:34',
+      '1:45',
+      '3:12',
+      '4:01',
+      '2:56',
+      '1:23',
+      '3:45',
+      '2:18',
+      '5:00',
+    ];
+    final statuses = [
+      CircularVideoStatus.lateNight,
+      CircularVideoStatus.debugging,
+      CircularVideoStatus.celebrating,
+      null,
+      CircularVideoStatus.struggling,
+      null,
+      CircularVideoStatus.building,
+      null,
+      CircularVideoStatus.lateNight,
+    ];
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        // Navigate to video
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: GriboulTheme.charcoal,
+          borderRadius: BorderRadius.circular(GriboulTheme.radiusSmall),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Placeholder for video thumbnail
+            Center(
+              child: Icon(
+                Icons.play_circle_outline,
+                color: GriboulTheme.ash,
+                size: 32,
+              ),
+            ),
+
+            // Duration
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: GriboulTheme.ink.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(GriboulTheme.radiusSmall),
+                ),
+                child: Text(
+                  durations[index],
+                  style: GriboulTheme.mono.copyWith(
+                    fontSize: 10,
+                    color: GriboulTheme.paper,
+                  ),
                 ),
               ),
+            ),
 
-              // Duration
+            // Status badge if applicable
+            if (statuses[index] != null)
               Positioned(
-                bottom: 4,
-                right: 4,
+                top: 4,
+                left: 4,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
+                    horizontal: 6,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlack.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(2),
+                    color: GriboulTheme.ink.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(
+                      GriboulTheme.radiusSmall,
+                    ),
                   ),
                   child: Text(
-                    '2:34',
-                    style: const TextStyle(
-                      fontFamily: 'Helvetica',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                    statuses[index]!.label,
+                    style: GriboulTheme.overline.copyWith(
+                      fontSize: 8,
+                      color: statuses[index]!.color,
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

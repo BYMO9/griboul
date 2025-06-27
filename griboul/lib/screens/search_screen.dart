@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../constants/colors.dart';
-import '../constants/fonts.dart';
-import '../constants/sizes.dart';
+import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import '../utils/griboul_theme.dart';
+import '../widgets/circular_video_widget.dart';
+import '../providers/feed_provider.dart'; // For VideoPost
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -14,28 +17,47 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
+  final Dio _dio = Dio();
+
+  String _searchQuery = '';
   bool _isSearching = false;
+  List<VideoPost> _searchResults = [];
+
+  // Recent searches
   List<String> _recentSearches = [
-    'founders working on AI at night',
+    'founders debugging at night',
     'solo builders in Europe',
     'struggling with fundraising',
     'just launched today',
     'building in public',
   ];
 
-  final List<String> _trendingSearches = [
-    'failed launch stories',
-    'first customer celebration',
-    'working weekends',
-    'bootstrapped founders',
-    'pivot moments',
-    'debugging at 3am',
+  // Trending topics
+  final List<Map<String, String>> _trendingTopics = [
+    {'topic': 'FAILED LAUNCHES', 'count': '23 stories'},
+    {'topic': 'FIRST CUSTOMER', 'count': '45 stories'},
+    {'topic': 'WORKING WEEKENDS', 'count': '128 stories'},
+    {'topic': 'BOOTSTRAPPED', 'count': '67 stories'},
+    {'topic': 'PIVOT MOMENTS', 'count': '34 stories'},
+    {'topic': '3AM DEBUGGING', 'count': '89 stories'},
   ];
+
+  String get apiUrl {
+    if (Platform.isIOS) {
+      return 'http://192.168.192.76:3000/api';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000/api';
+    }
+    return 'http://localhost:3000/api';
+  }
 
   @override
   void initState() {
     super.initState();
-    _searchFocus.requestFocus();
+    // Auto-focus search on open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocus.requestFocus();
+    });
   }
 
   @override
@@ -45,126 +67,242 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  void _performSearch(String query) {
+  Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) return;
 
     setState(() {
+      _searchQuery = query;
       _isSearching = true;
-      if (!_recentSearches.contains(query)) {
-        _recentSearches.insert(0, query);
-        if (_recentSearches.length > 5) {
-          _recentSearches.removeLast();
-        }
-      }
+      _searchResults = [];
     });
 
-    // Navigate to results after delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        setState(() => _isSearching = false);
+    HapticFeedback.lightImpact();
+
+    // Add to recent searches
+    if (!_recentSearches.contains(query)) {
+      _recentSearches.insert(0, query);
+      if (_recentSearches.length > 5) {
+        _recentSearches.removeLast();
       }
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final token = user != null ? await user.getIdToken() : null;
+
+      // Try API search first
+      final response = await _dio
+          .get(
+            '$apiUrl/search/text',
+            queryParameters: {'q': query, 'limit': 20},
+            options: Options(
+              headers:
+                  token != null ? {'Authorization': 'Bearer $token'} : null,
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.data['results'] != null) {
+        final results = response.data['results'] as List;
+
+        setState(() {
+          _searchResults =
+              results.map((result) {
+                // Transform search result to VideoPost
+                final video = result['video'] ?? {};
+                final user = result['user'] ?? {};
+
+                return VideoPost(
+                  id: video['_id'] ?? '',
+                  userId: user['_id'] ?? '',
+                  userName: user['name'] ?? 'Unknown Builder',
+                  userAvatar: user['avatar'] ?? '',
+                  videoUrl: video['videoUrl'] ?? '',
+                  thumbnailUrl: video['thumbnailUrl'] ?? '',
+                  miniStatement: result['miniStatement'] ?? '',
+                  duration: video['duration'] ?? 0,
+                  views: video['views'] ?? 0,
+                  createdAt: DateTime.parse(
+                    video['createdAt'] ?? DateTime.now().toIso8601String(),
+                  ),
+                  isLiked: false,
+                  likeCount: 0,
+                  userLocation: user['location'] ?? 'Unknown',
+                  userBuilding: user['building'] ?? 'Something',
+                  status: result['entities']?['mood'],
+                );
+              }).toList();
+          _isSearching = false;
+        });
+      } else {
+        _loadMockResults(query);
+      }
+    } catch (e) {
+      print('Search error: $e');
+      // Fallback to mock data
+      _loadMockResults(query);
+    }
+  }
+
+  void _loadMockResults(String query) {
+    // Mock search results
+    setState(() {
+      _searchResults = [
+        VideoPost(
+          id: '1',
+          userId: 'user1',
+          userName: 'Alex Chen',
+          userAvatar: '',
+          videoUrl: 'https://example.com/video1.mp4',
+          thumbnailUrl: '',
+          miniStatement:
+              'Debugging payment integration at 3am. Why do we do this to ourselves?',
+          duration: 222,
+          views: 45,
+          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+          isLiked: false,
+          likeCount: 0,
+          userLocation: 'San Francisco',
+          userBuilding: 'AI Writing Tools',
+          status: 'lateNight',
+        ),
+        VideoPost(
+          id: '2',
+          userId: 'user2',
+          userName: 'Maria Rodriguez',
+          userAvatar: '',
+          videoUrl: 'https://example.com/video2.mp4',
+          thumbnailUrl: '',
+          miniStatement:
+              'Finally fixed the memory leak that\'s been haunting me for weeks',
+          duration: 138,
+          views: 89,
+          createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+          isLiked: false,
+          likeCount: 0,
+          userLocation: 'Barcelona',
+          userBuilding: 'Climate Tech SaaS',
+          status: 'debugging',
+        ),
+      ];
+      _isSearching = false;
     });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _isSearching = false;
+      _searchResults = [];
+    });
+    _searchFocus.requestFocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    final String? initialQuery =
-        ModalRoute.of(context)?.settings.arguments as String?;
-
-    if (initialQuery != null && _searchController.text.isEmpty) {
-      _searchController.text = initialQuery;
-      _performSearch(initialQuery);
-    }
-
     return Scaffold(
-      backgroundColor: AppColors.primaryBlack,
+      backgroundColor: GriboulTheme.ink,
       body: SafeArea(
         child: Column(
           children: [
             // Search header
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(GriboulTheme.space3),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: GriboulTheme.smoke, width: 1),
+                ),
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Title
                   Row(
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: const Icon(
+                        child: Icon(
                           Icons.arrow_back,
-                          color: AppColors.textPrimary,
+                          color: GriboulTheme.paper,
                           size: 24,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceBlack,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.textPrimary.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
+                      const SizedBox(width: GriboulTheme.space2),
+                      Text('Search Builders', style: GriboulTheme.headline3),
+                    ],
+                  ),
+
+                  const SizedBox(height: GriboulTheme.space3),
+
+                  // Search input - NYT style
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: GriboulTheme.charcoal,
+                      borderRadius: BorderRadius.circular(
+                        GriboulTheme.radiusSmall,
+                      ),
+                      border: Border.all(
+                        color:
+                            _searchFocus.hasFocus
+                                ? GriboulTheme.paper
+                                : GriboulTheme.smoke,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: GriboulTheme.space2),
+                        Icon(Icons.search, color: GriboulTheme.ash, size: 20),
+                        const SizedBox(width: GriboulTheme.space2),
+                        Expanded(
                           child: TextField(
                             controller: _searchController,
                             focusNode: _searchFocus,
-                            style: const TextStyle(
+                            style: GriboulTheme.body1.copyWith(
                               fontFamily: 'Georgia',
-                              fontSize: 18,
-                              color: AppColors.textPrimary,
                             ),
                             decoration: InputDecoration(
                               hintText: 'Describe what you\'re looking for...',
-                              hintStyle: TextStyle(
+                              hintStyle: GriboulTheme.body1.copyWith(
                                 fontFamily: 'Georgia',
-                                fontSize: 18,
-                                color: AppColors.textTertiary,
+                                color: GriboulTheme.ash,
                               ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              suffixIcon:
-                                  _searchController.text.isNotEmpty
-                                      ? GestureDetector(
-                                        onTap: () {
-                                          _searchController.clear();
-                                          setState(() {});
-                                        },
-                                        child: Icon(
-                                          Icons.clear,
-                                          color: AppColors.textSecondary,
-                                          size: 20,
-                                        ),
-                                      )
-                                      : null,
                             ),
                             onSubmitted: _performSearch,
                             onChanged: (value) => setState(() {}),
                           ),
                         ),
-                      ),
-                    ],
+                        if (_searchController.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: _clearSearch,
+                            child: Container(
+                              padding: const EdgeInsets.all(
+                                GriboulTheme.space1,
+                              ),
+                              child: Icon(
+                                Icons.close,
+                                color: GriboulTheme.ash,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: GriboulTheme.space1),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            Container(
-              height: 0.5,
-              color: AppColors.textPrimary.withOpacity(0.2),
-            ),
-
-            // Search content
+            // Content
             Expanded(
               child:
                   _isSearching
                       ? _buildSearchingState()
-                      : _searchController.text.isEmpty
+                      : _searchQuery.isEmpty
                       ? _buildSuggestions()
                       : _buildResults(),
             ),
@@ -176,89 +314,116 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildSuggestions() {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(GriboulTheme.space3),
       children: [
         // Recent searches
         if (_recentSearches.isNotEmpty) ...[
           Text(
-            'RECENT',
-            style: TextStyle(
-              fontFamily: 'Helvetica',
-              fontSize: 11,
-              letterSpacing: 1.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+            'RECENT SEARCHES',
+            style: GriboulTheme.overline.copyWith(
+              color: GriboulTheme.ash,
+              letterSpacing: 2.0,
             ),
           ),
-          const SizedBox(height: 16),
-          ..._recentSearches.map((search) => _buildSearchItem(search, true)),
-          const SizedBox(height: 32),
+          const SizedBox(height: GriboulTheme.space2),
+          ..._recentSearches.map((search) => _buildSearchItem(search)),
+          const SizedBox(height: GriboulTheme.space5),
         ],
 
-        // Trending searches
+        // Trending topics
         Text(
-          'TRENDING SEARCHES',
-          style: TextStyle(
-            fontFamily: 'Helvetica',
-            fontSize: 11,
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+          'TRENDING IN THE COMMUNITY',
+          style: GriboulTheme.overline.copyWith(
+            color: GriboulTheme.ash,
+            letterSpacing: 2.0,
           ),
         ),
-        const SizedBox(height: 16),
-        ..._trendingSearches.map((search) => _buildSearchItem(search, false)),
+        const SizedBox(height: GriboulTheme.space2),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: GriboulTheme.space2,
+            mainAxisSpacing: GriboulTheme.space2,
+            childAspectRatio: 2.5,
+          ),
+          itemCount: _trendingTopics.length,
+          itemBuilder: (context, index) {
+            final topic = _trendingTopics[index];
+            return _buildTrendingTopic(topic);
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildSearchItem(String search, bool isRecent) {
+  Widget _buildSearchItem(String search) {
     return GestureDetector(
       onTap: () {
         _searchController.text = search;
         _performSearch(search);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: GriboulTheme.space2),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: AppColors.textPrimary.withOpacity(0.1),
-              width: 0.5,
-            ),
+            bottom: BorderSide(color: GriboulTheme.smoke, width: 0.5),
           ),
         ),
         child: Row(
           children: [
-            Icon(
-              isRecent ? Icons.history : Icons.trending_up,
-              color: AppColors.textTertiary,
-              size: 20,
-            ),
-            const SizedBox(width: 16),
+            Icon(Icons.history, color: GriboulTheme.ash, size: 20),
+            const SizedBox(width: GriboulTheme.space2),
             Expanded(
               child: Text(
                 search,
-                style: const TextStyle(
-                  fontFamily: 'Georgia',
-                  fontSize: 16,
-                  color: AppColors.textPrimary,
-                ),
+                style: GriboulTheme.body1.copyWith(fontFamily: 'Georgia'),
               ),
             ),
-            if (isRecent)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _recentSearches.remove(search);
-                  });
-                },
-                child: Icon(
-                  Icons.close,
-                  color: AppColors.textTertiary,
-                  size: 18,
-                ),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _recentSearches.remove(search);
+                });
+              },
+              child: Icon(Icons.close, color: GriboulTheme.ash, size: 18),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendingTopic(Map<String, String> topic) {
+    return GestureDetector(
+      onTap: () {
+        _searchController.text = topic['topic']!.toLowerCase();
+        _performSearch(topic['topic']!.toLowerCase());
+      },
+      child: Container(
+        padding: const EdgeInsets.all(GriboulTheme.space2),
+        decoration: BoxDecoration(
+          color: GriboulTheme.charcoal,
+          borderRadius: BorderRadius.circular(GriboulTheme.radiusSmall),
+          border: Border.all(color: GriboulTheme.smoke, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              topic['topic']!,
+              style: GriboulTheme.overline.copyWith(
+                fontSize: 11,
+                letterSpacing: 1.5,
               ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              topic['count']!,
+              style: GriboulTheme.caption.copyWith(color: GriboulTheme.ash),
+            ),
           ],
         ),
       ),
@@ -275,20 +440,23 @@ class _SearchScreenState extends State<SearchScreen> {
             height: 40,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.textSecondary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(GriboulTheme.ash),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: GriboulTheme.space3),
           Text(
             'SEARCHING',
-            style: TextStyle(
-              fontFamily: 'Helvetica',
-              fontSize: 11,
-              letterSpacing: 1.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+            style: GriboulTheme.overline.copyWith(
+              color: GriboulTheme.ash,
+              letterSpacing: 2.0,
+            ),
+          ),
+          const SizedBox(height: GriboulTheme.space1),
+          Text(
+            'Finding builders like you...',
+            style: GriboulTheme.body2.copyWith(
+              fontFamily: 'Georgia',
+              color: GriboulTheme.mist,
             ),
           ),
         ],
@@ -297,124 +465,162 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildResults() {
-    // Mock results
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, color: GriboulTheme.ash, size: 48),
+            const SizedBox(height: GriboulTheme.space3),
+            Text(
+              'NO RESULTS FOUND',
+              style: GriboulTheme.overline.copyWith(
+                color: GriboulTheme.ash,
+                letterSpacing: 2.0,
+              ),
+            ),
+            const SizedBox(height: GriboulTheme.space1),
+            Text(
+              'Try different keywords',
+              style: GriboulTheme.body2.copyWith(
+                fontFamily: 'Georgia',
+                color: GriboulTheme.mist,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '3 BUILDERS FOUND',
-          style: TextStyle(
-            fontFamily: 'Helvetica',
-            fontSize: 11,
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+        // Results header
+        Container(
+          padding: const EdgeInsets.all(GriboulTheme.space3),
+          child: Row(
+            children: [
+              Text(
+                '${_searchResults.length} BUILDERS FOUND',
+                style: GriboulTheme.overline.copyWith(
+                  color: GriboulTheme.ash,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'RELEVANCE',
+                style: GriboulTheme.overline.copyWith(
+                  color: GriboulTheme.ash,
+                  fontSize: 10,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
-        _buildResultCard(
-          'Alex Chen',
-          'Building AI tools at night after my 9-5',
-          'San Francisco',
-          '2 hours ago',
-        ),
-        _buildResultCard(
-          'Maria Rodriguez',
-          'Solo founder struggling with user acquisition',
-          'Barcelona',
-          '5 hours ago',
-        ),
-        _buildResultCard(
-          'James Wilson',
-          'Just pivoted after 6 months of no traction',
-          'London',
-          '1 day ago',
+
+        GriboulTheme.divider(),
+
+        // Results list
+        Expanded(
+          child: ListView.separated(
+            itemCount: _searchResults.length,
+            separatorBuilder: (context, index) => GriboulTheme.divider(),
+            itemBuilder: (context, index) {
+              final result = _searchResults[index];
+              return _buildResultCard(result);
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildResultCard(
-    String name,
-    String description,
-    String location,
-    String time,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceBlack,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.elevatedBlack,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    name.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+  Widget _buildResultCard(VideoPost result) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.pushNamed(
+          context,
+          '/video-player',
+          arguments: {
+            'id': result.id,
+            'videoUrl': result.videoUrl,
+            'thumbnailUrl': result.thumbnailUrl,
+            'builderName': result.userName,
+            'buildingWhat': result.userBuilding,
+            'miniStatement': result.miniStatement,
+            'timeAgo': result.timeAgo,
+            'duration': result.formattedDuration,
+            'location': result.userLocation,
+          },
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(GriboulTheme.space3),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Circular video preview
+            CircularVideoWidget(
+              size: 72,
+              thumbnailUrl: result.thumbnailUrl,
+              duration: result.formattedDuration,
+              status: result.videoStatus,
+            ),
+
+            const SizedBox(width: GriboulTheme.space2),
+
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name and location
+                  Row(
+                    children: [
+                      Text(
+                        result.userName,
+                        style: GriboulTheme.body1.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        result.timeAgo.toUpperCase(),
+                        style: GriboulTheme.overline.copyWith(
+                          color: GriboulTheme.ash,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Building and location
+                  Text(
+                    '${result.userBuilding} • ${result.userLocation}',
+                    style: GriboulTheme.caption.copyWith(
+                      color: GriboulTheme.ash,
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontFamily: 'Helvetica',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
+
+                  const SizedBox(height: GriboulTheme.space1),
+
+                  // Statement
+                  Text(
+                    '"${result.miniStatement}"',
+                    style: GriboulTheme.body2.copyWith(
+                      fontFamily: 'Georgia',
+                      fontStyle: FontStyle.italic,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$location • $time',
-                      style: TextStyle(
-                        fontFamily: 'Helvetica',
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              Icon(
-                Icons.play_circle_outline,
-                color: AppColors.textSecondary,
-                size: 32,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            description,
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 15,
-              color: AppColors.textPrimary.withOpacity(0.9),
-              height: 1.4,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

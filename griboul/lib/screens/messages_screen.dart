@@ -1,110 +1,123 @@
 import 'package:flutter/material.dart';
-import '../constants/colors.dart';
-import '../constants/fonts.dart';
-import '../constants/sizes.dart';
-import 'chat_detail_screen.dart';
+import 'package:flutter/services.dart';
+import '../utils/griboul_theme.dart';
+import '../widgets/circular_video_widget.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
 
-  final List<Map<String, dynamic>> _mockConversations = const [
+  final List<Map<String, dynamic>> _conversations = const [
     {
       'id': '1',
       'name': 'Sarah Chen',
       'lastMessage': 'Thanks for the AWS tips! Finally got it working',
-      'time': '2m ago',
+      'time': '2 MIN AGO',
       'unread': true,
-      'avatar': 'SC',
+      'hasVideo': false,
+      'building': 'AI Climate Dashboard',
     },
     {
       'id': '2',
       'name': 'Marcus Rodriguez',
-      'lastMessage': 'Video message',
-      'time': '1h ago',
+      'lastMessage': 'Sent a video response',
+      'time': '1 HOUR AGO',
       'unread': false,
-      'avatar': 'MR',
-      'isVideo': true,
+      'hasVideo': true,
+      'videoDuration': '2:18',
+      'building': 'B2B SaaS Platform',
     },
     {
       'id': '3',
       'name': 'Amara Okafor',
-      'lastMessage': 'Same struggle here. Want to connect?',
-      'time': '3h ago',
+      'lastMessage': 'Same struggle here. Want to connect on a call?',
+      'time': 'YESTERDAY',
       'unread': false,
-      'avatar': 'AO',
+      'hasVideo': false,
+      'building': 'EdTech for Africa',
     },
     {
       'id': '4',
       'name': 'David Kim',
-      'lastMessage': 'Just shipped v2! Check it out',
-      'time': 'Yesterday',
+      'lastMessage': 'Just shipped v2! Check out the demo',
+      'time': '3 DAYS AGO',
       'unread': false,
-      'avatar': 'DK',
+      'hasVideo': false,
+      'building': 'Open Source Tools',
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBlack,
+      backgroundColor: GriboulTheme.ink,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
+              padding: const EdgeInsets.all(GriboulTheme.space3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Messages',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: AppColors.textPrimary.withOpacity(0.3),
-                        width: 1,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Correspondence',
+                        style: GriboulTheme.headline1.copyWith(fontSize: 32),
                       ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.edit_outlined,
-                      color: AppColors.textPrimary,
-                      size: 20,
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          // New message
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: GriboulTheme.smoke,
+                              width: 1,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            color: GriboulTheme.paper,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: GriboulTheme.space1),
+                  Text(
+                    'BUILDER TO BUILDER',
+                    style: GriboulTheme.overline.copyWith(
+                      color: GriboulTheme.ash,
+                      letterSpacing: 2.0,
                     ),
                   ),
                 ],
               ),
             ),
 
-            Container(
-              height: 0.5,
-              color: AppColors.textPrimary.withOpacity(0.2),
-            ),
+            GriboulTheme.divider(),
 
             // Conversations list
             Expanded(
               child:
-                  _mockConversations.isEmpty
+                  _conversations.isEmpty
                       ? _buildEmptyState()
                       : ListView.separated(
-                        itemCount: _mockConversations.length,
+                        itemCount: _conversations.length,
                         separatorBuilder:
-                            (context, index) => Container(
-                              height: 0.5,
-                              margin: const EdgeInsets.only(left: 80),
-                              color: AppColors.textPrimary.withOpacity(0.1),
+                            (context, index) => GriboulTheme.divider(
+                              indent:
+                                  GriboulTheme.space3 + 72, // Align with text
                             ),
                         itemBuilder: (context, index) {
-                          final conversation = _mockConversations[index];
+                          final conversation = _conversations[index];
                           return _buildConversationItem(context, conversation);
                         },
                       ),
@@ -121,36 +134,32 @@ class MessagesScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.textTertiary, width: 2),
+              border: Border.all(color: GriboulTheme.smoke, width: 2),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.chat_bubble_outline,
-              color: AppColors.textTertiary,
-              size: 40,
+              Icons.message_outlined,
+              color: GriboulTheme.ash,
+              size: 48,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: GriboulTheme.space3),
           Text(
             'NO MESSAGES YET',
-            style: TextStyle(
-              fontFamily: 'Helvetica',
-              fontSize: 11,
-              letterSpacing: 1.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+            style: GriboulTheme.overline.copyWith(
+              color: GriboulTheme.ash,
+              letterSpacing: 2.0,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: GriboulTheme.space1),
           Text(
-            'Connect with other builders',
-            style: TextStyle(
+            'Start a conversation with fellow builders',
+            style: GriboulTheme.body2.copyWith(
               fontFamily: 'Georgia',
-              fontSize: 16,
-              color: AppColors.textTertiary,
+              color: GriboulTheme.mist,
             ),
           ),
         ],
@@ -164,89 +173,117 @@ class MessagesScreen extends StatelessWidget {
   ) {
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const ChatDetailScreen(),
-            settings: RouteSettings(
-              arguments: {
-                'name': conversation['name'],
-                'avatar': conversation['avatar'],
-              },
-            ),
+            builder:
+                (context) => ChatDetailScreen(
+                  name: conversation['name'],
+                  building: conversation['building'],
+                ),
           ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        color: AppColors.primaryBlack,
+        padding: const EdgeInsets.all(GriboulTheme.space3),
+        color: GriboulTheme.ink,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Avatar
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color:
-                    conversation['unread'] == true
-                        ? AppColors.accentBlue
-                        : AppColors.surfaceBlack,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  conversation['avatar'],
-                  style: TextStyle(
-                    fontFamily: 'Georgia',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+            // Avatar/Video thumbnail
+            if (conversation['hasVideo'] == true)
+              CircularVideoWidget(
+                size: 56,
+                thumbnailUrl: 'https://via.placeholder.com/56',
+                duration: conversation['videoDuration'],
+                showPlayButton: true,
+              )
+            else
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color:
+                      conversation['unread'] == true
+                          ? GriboulTheme.linkBlue.withOpacity(0.1)
+                          : GriboulTheme.charcoal,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color:
+                        conversation['unread'] == true
+                            ? GriboulTheme.linkBlue
+                            : GriboulTheme.smoke,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    conversation['name'].split(' ').map((n) => n[0]).join(),
+                    style: GriboulTheme.body1.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color:
+                          conversation['unread'] == true
+                              ? GriboulTheme.linkBlue
+                              : GriboulTheme.paper,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
+
+            const SizedBox(width: GriboulTheme.space2),
 
             // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Name and time
                   Row(
                     children: [
-                      Text(
-                        conversation['name'],
-                        style: TextStyle(
-                          fontFamily: 'Helvetica',
-                          fontSize: 16,
-                          fontWeight:
-                              conversation['unread'] == true
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                          color: AppColors.textPrimary,
+                      Expanded(
+                        child: Text(
+                          conversation['name'],
+                          style: GriboulTheme.body1.copyWith(
+                            fontWeight:
+                                conversation['unread'] == true
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       Text(
                         conversation['time'],
-                        style: TextStyle(
-                          fontFamily: 'Helvetica',
-                          fontSize: 12,
+                        style: GriboulTheme.overline.copyWith(
                           color:
                               conversation['unread'] == true
-                                  ? AppColors.textPrimary
-                                  : AppColors.textTertiary,
+                                  ? GriboulTheme.paper
+                                  : GriboulTheme.ash,
+                          fontSize: 10,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+
+                  const SizedBox(height: 2),
+
+                  // Building what
+                  Text(
+                    conversation['building'],
+                    style: GriboulTheme.caption.copyWith(
+                      color: GriboulTheme.ash,
+                    ),
+                  ),
+
+                  const SizedBox(height: GriboulTheme.space1),
+
+                  // Last message
                   Row(
                     children: [
-                      if (conversation['isVideo'] == true) ...[
+                      if (conversation['hasVideo'] == true) ...[
                         Icon(
                           Icons.videocam,
-                          color: AppColors.textSecondary,
+                          color: GriboulTheme.mist,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
@@ -254,13 +291,12 @@ class MessagesScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           conversation['lastMessage'],
-                          style: TextStyle(
+                          style: GriboulTheme.body2.copyWith(
                             fontFamily: 'Georgia',
-                            fontSize: 15,
                             color:
                                 conversation['unread'] == true
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
+                                    ? GriboulTheme.paper
+                                    : GriboulTheme.mist,
                             fontWeight:
                                 conversation['unread'] == true
                                     ? FontWeight.w500
@@ -279,17 +315,53 @@ class MessagesScreen extends StatelessWidget {
             // Unread indicator
             if (conversation['unread'] == true)
               Container(
-                margin: const EdgeInsets.only(left: 8),
+                margin: const EdgeInsets.only(
+                  left: GriboulTheme.space2,
+                  top: GriboulTheme.space2,
+                ),
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.accentBlue,
+                decoration: BoxDecoration(
+                  color: GriboulTheme.linkBlue,
                   shape: BoxShape.circle,
                 ),
               ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// Chat detail screen stub
+class ChatDetailScreen extends StatelessWidget {
+  final String name;
+  final String building;
+
+  const ChatDetailScreen({
+    super.key,
+    required this.name,
+    required this.building,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: GriboulTheme.ink,
+      appBar: AppBar(
+        backgroundColor: GriboulTheme.ink,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: GriboulTheme.body1),
+            Text(
+              building,
+              style: GriboulTheme.caption.copyWith(color: GriboulTheme.ash),
+            ),
+          ],
+        ),
+      ),
+      body: const Center(child: Text('Chat detail implementation')),
     );
   }
 }
